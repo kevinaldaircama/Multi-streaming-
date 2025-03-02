@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <script type="module">
+        // Importar Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Importar librería para exportar a Excel
+        import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+
+        // Configuración de Firebase
+        const firebaseConfig = {  
+            apiKey: "AIzaSyBYCB8BaGy8BddWLRFJuoVkW7D4YldjOIk",
+            authDomain: "admin-37504.firebaseapp.com",
+            projectId: "admin-37504",
+            storageBucket: "admin-37504.firebasestorage.app",
+            messagingSenderId: "364334617962",
+            appId: "1:364334617962:web:6cfd62721128dddfa8c113"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Cargar usuarios en la tabla
+        async function cargarUsuarios() {
+            const usuariosTabla = document.getElementById("usuariosTabla");
+            usuariosTabla.innerHTML = "";
+
+            const querySnapshot = await getDocs(collection(db, "usuarios"));
+            let totalUsuarios = 0;
+            let activos = 0;
+            let inactivos = 0;
+            let registrosPorMes = {};
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                totalUsuarios++;
+
+                if (data.activo) {
+                    activos++;
+                } else {
+                    inactivos++;
+                }
+
+                let fecha = data.fechaRegistro || "Desconocido";
+                if (fecha !== "Desconocido") {
+                    let mes = fecha.split("-")[1];
+                    registrosPorMes[mes] = (registrosPorMes[mes] || 0) + 1;
+                }
+
+                let row = `
+                    <tr>
+                        <td>${data.username}</td>
+                        <td>${data.email}</td>
+                        <td>${data.token}</td>
+                        <td>${fecha}</td>
+                        <td>${data.activo ? "Activo" : "Inactivo"}</td>
+                        <td>
+                            <button onclick="editarUsuario('${doc.id}', '${data.username}')">Editar</button>
+                            <button onclick="eliminarUsuario('${doc.id}')">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+                usuariosTabla.innerHTML += row;
+            });
+
+            document.getElementById("totalUsuarios").textContent = totalUsuarios;
+            document.getElementById("usuariosActivos").textContent = activos;
+            document.getElementById("usuariosInactivos").textContent = inactivos;
+        }
+
+        // Editar Usuario
+        window.editarUsuario = async function (id, username) {
+            const nuevoNombre = prompt("Editar nombre de usuario:", username);
+            if (nuevoNombre) {
+                const userRef = doc(db, "usuarios", id);
+                await updateDoc(userRef, { username: nuevoNombre });
+                alert("Usuario actualizado");
+                cargarUsuarios();
+            }
+        };
+
+        // Eliminar Usuario
+        window.eliminarUsuario = async function (id) {
+            if (confirm("¿Estás seguro de eliminar este usuario?")) {
+                await deleteDoc(doc(db, "usuarios", id));
+                alert("Usuario eliminado");
+                cargarUsuarios();
+            }
+        };
+
+        // Exportar a Excel
+        document.getElementById("exportarExcel").addEventListener("click", function () {
+            let data = [];
+            let filas = document.querySelectorAll("#usuariosTabla tr");
+            filas.forEach(fila => {
+                let columnas = fila.querySelectorAll("td");
+                let filaData = [];
+                columnas.forEach(columna => filaData.push(columna.innerText));
+                data.push(filaData);
+            });
+
+            let wb = XLSX.utils.book_new();
+            let ws = XLSX.utils.aoa_to_sheet([["Usuario", "Email", "Token", "Fecha de Registro", "Estado"], ...data]);
+            XLSX.utils.book_append_sheet(wb, ws, "Usuarios");
+            XLSX.writeFile(wb, "usuarios.xlsx");
+        });
+
+        // Filtro de usuarios
+        document.getElementById("filtroEstado").addEventListener("change", function () {
+            let filtro = this.value;
+            let filas = document.querySelectorAll("#usuariosTabla tr");
+            filas.forEach(fila => {
+                let estado = fila.children[4].innerText;
+                fila.style.display = (filtro === "todos" || estado === filtro) ? "" : "none";
+            });
+        });
+
+        // Cargar usuarios cuando se abra la página
+        document.addEventListener("DOMContentLoaded", cargarUsuarios);
+
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            margin: auto;
+        }
+        h2 {
+            margin-bottom: 10px;
+        }
+        input, select {
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 2px;
+        }
+        button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Panel de Administración Mejorado</h2>
+        <p>Total de Usuarios: <span id="totalUsuarios">0</span></p>
+        <p>Usuarios Activos: <span id="usuariosActivos">0</span></p>
+        <p>Usuarios Inactivos: <span id="usuariosInactivos">0</span></p>
+
+        <input type="text" id="buscar" placeholder="Buscar usuario...">
+        <select id="filtroEstado">
+            <option value="todos">Todos</option>
+            <option value="Activo">Activos</option>
+            <option value="Inactivo">Inactivos</option>
+        </select>
+        <button id="exportarExcel">Exportar a Excel</button>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Token</th>
+                    <th>Fecha de Registro</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="usuariosTabla"></tbody>
+        </table>
+    </div>
+</body>
+</html>

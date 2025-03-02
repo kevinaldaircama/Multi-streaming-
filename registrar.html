@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro con Firebase</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #218838;
+        }
+        #message {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        .hidden {
+            display: none;
+        }
+        .user-data {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            text-align: left;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Registro de Usuario</h2>
+        <form id="registerForm">
+            <input type="text" id="username" placeholder="Usuario" required><br>
+            <input type="email" id="email" placeholder="Correo" required><br>
+            <input type="password" id="password" placeholder="Contraseña" required><br>
+            <button type="submit">Registrar</button>
+        </form>
+        <p id="message"></p>
+    </div>
+
+    <div id="userData" class="user-data hidden">
+        <h3>Datos Registrados</h3>
+        <p><strong>Usuario:</strong> <span id="displayUsername"></span></p>
+        <p><strong>Correo:</strong> <span id="displayEmail"></span></p>
+        <p><strong>Token:</strong> <span id="displayToken"></span></p>
+    </div>
+
+    <script type="module">
+  // Importar Firebase desde su CDN oficial
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // Configuración de Firebase
+  const firebaseConfig = {  
+      apiKey: "AIzaSyBYCB8BaGy8BddWLRFJuoVkW7D4YldjOIk",
+      authDomain: "admin-37504.firebaseapp.com",
+      projectId: "admin-37504",
+      storageBucket: "admin-37504.firebasestorage.app",
+      messagingSenderId: "364334617962",
+      appId: "1:364334617962:web:6cfd62721128dddfa8c113"
+  };
+
+  // Inicializar Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Manejo del formulario
+  document.getElementById("registerForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      let username = document.getElementById("username").value;
+      let email = document.getElementById("email").value;
+      let password = document.getElementById("password").value;
+      let message = document.getElementById("message");
+      let userDataDiv = document.getElementById("userData");
+
+      message.textContent = "Validando datos...";
+      message.style.color = "#007bff";
+
+      setTimeout(async () => {
+          try {
+              // Crear usuario en Firebase Auth
+              const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+              const user = userCredential.user;
+              const token = Math.random().toString(36).substr(2); // Token aleatorio
+
+              // Guardar en Firestore
+              await setDoc(doc(db, "usuarios", user.uid), {
+                  username: username,
+                  email: email,
+                  token: token,
+                  createdAt: new Date()
+              });
+
+              // Mostrar datos en pantalla
+              document.getElementById("displayUsername").textContent = username;
+              document.getElementById("displayEmail").textContent = email;
+              document.getElementById("displayToken").textContent = token;
+              userDataDiv.classList.remove("hidden");
+
+              message.textContent = "Usuario registrado exitosamente";
+              message.style.color = "#28a745";
+          } catch (error) {
+              message.textContent = "Error: " + error.message;
+              message.style.color = "red";
+          }
+      }, 1000);
+  });
+</script>
+</body>
+</html>
